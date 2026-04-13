@@ -13,8 +13,10 @@ import (
 )
 
 type Article struct {
-	Title string
-	Link  string
+	ID        int
+	Title     string
+	Link      string
+	ScrapedAt string
 }
 
 type selector struct {
@@ -105,14 +107,22 @@ func saveArticle(db *sql.DB, a Article) error {
 	return err
 }
 
-func showLatestArticles(db *sql.DB, limit int) {
-	rows, err := db.Query(
-		`SELECT title, link, scraped_at FROM articles ORDER BY scraped_at DESC LIMIT ?`,
-		limit,
-	)
+func getArticles(db *sql.DB, lastID int) ([]Article, error) {
+	const limit = 20
+	var rows *sql.Rows
+	var err error
+
+	if lastID == 0 {
+		rows, err = db.Query(`SELECT id, title, link, scraped_at FROM articles ORDER BY scraped_at DESC LIMIT ?`,
+			limit,
+		)
+	} else {
+		rows, err = db.Query(`SELECT id, title, link, scraped_at FROM articles WHERE id < ? ORDER BY scraped_at DESC LIMIT ?`,
+			lastID, limit,
+		)
+	}
 	if err != nil {
-		log.Println("failed to fetch articles from db:", err)
-		return
+		return nil, err
 	}
 
 	defer func() {
@@ -121,15 +131,15 @@ func showLatestArticles(db *sql.DB, limit int) {
 		}
 	}()
 
-	fmt.Printf("===== Latest %d Articles =====\n", limit)
+	var articles []Article
 	for rows.Next() {
-		var title, link, scrapedAt string
-		if err := rows.Scan(&title, &link, &scrapedAt); err != nil {
-			log.Println("row scan error:", err)
-			continue
+		var a Article
+		if err := rows.Scan(&a.ID, &a.Title, &a.Link, &a.ScrapedAt); err != nil {
+			return nil, err
 		}
-		fmt.Printf("[%s] %s\n%s\n--------------------------\n", scrapedAt, title, link)
+		articles = append(articles, a)
 	}
+	return articles, rows.Err()
 }
 
 func registerHandler(c *colly.Collector, db *sql.DB, s selector) {
@@ -147,20 +157,7 @@ func registerHandler(c *colly.Collector, db *sql.DB, s selector) {
 	})
 }
 
-func main() {
-	urls, selectors := loadConfig()
-
-	db, err := initDB("news.db")
-	if err != nil {
-		log.Fatal("failed to initialize db:", err)
-	}
-
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Println("failed to close db:", err)
-		}
-	}()
-
+func scrape(db *sql.DB, urls []string, selectors []selector) {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 	)
@@ -170,14 +167,32 @@ func main() {
 	}
 
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("visiting", r.URL)
+		fmt.Println("Visiting", r.URL)
 	})
 
 	for _, url := range urls {
 		if err := c.Visit(url); err != nil {
-			log.Printf("failed to visit %s: %v\n", url, err)
+			log.Printf("Failed to visit %s: %v\n", url, err)
 		}
 	}
+}
 
-	showLatestArticles(db, 20)
+func main() {
+	urls, selectors := loadConfig()
+
+	db, err := initDB("news.db")
+	if err != nil {
+		log.Fatal("Failed to initialize db:", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Println("failed to close db:", err)
+		}
+	}()
+
+	scrape(db, urls, selectors)
+
+	if err := startTUI(db); err != nil {
+		log.Fatal(err)
+	}
 }
