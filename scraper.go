@@ -162,6 +162,16 @@ func scrape(db *sql.DB, urls []string, selectors []selector) {
 	}
 }
 
+func newCollector(db *sql.DB, selectors []selector) *colly.Collector {
+	c := colly.NewCollector(
+		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+	)
+	for _, s := range selectors {
+		registerHandler(c, db, s)
+	}
+	return c
+}
+
 func main() {
 	urls, selectors := loadConfig()
 
@@ -175,9 +185,7 @@ func main() {
 		}
 	}()
 
-	scrape(db, urls, selectors)
-
-	if err := startTUI(db); err != nil {
+	if err := startTUI(db, urls, selectors); err != nil {
 		log.Fatal(err)
 	}
 }
