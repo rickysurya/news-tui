@@ -25,12 +25,6 @@ type selector struct {
 	link      string
 }
 
-func (a Article) Print() {
-	fmt.Println("Headline:", a.Title)
-	fmt.Println("Link:", a.Link)
-	fmt.Println("--------------------------")
-}
-
 func loadConfig() ([]string, []selector) {
 	f, err := os.Open(".env")
 	if err != nil {
@@ -107,24 +101,15 @@ func saveArticle(db *sql.DB, a Article) error {
 	return err
 }
 
-func getArticles(db *sql.DB, lastID int) ([]Article, error) {
-	const limit = 20
-	var rows *sql.Rows
-	var err error
-
-	if lastID == 0 {
-		rows, err = db.Query(`SELECT id, title, link, scraped_at FROM articles ORDER BY scraped_at DESC LIMIT ?`,
-			limit,
-		)
-	} else {
-		rows, err = db.Query(`SELECT id, title, link, scraped_at FROM articles WHERE id < ? ORDER BY scraped_at DESC LIMIT ?`,
-			lastID, limit,
-		)
-	}
+func getArticles(db *sql.DB, page int) ([]Article, error) {
+	const limit = 10
+	rows, err := db.Query(
+		`SELECT id, title, link, scraped_at FROM articles ORDER BY scraped_at DESC LIMIT ? OFFSET ?`,
+		limit, page*limit,
+	)
 	if err != nil {
 		return nil, err
 	}
-
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Println("failed to close rows:", err)
