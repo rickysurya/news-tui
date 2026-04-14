@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/progress"
@@ -165,7 +166,9 @@ func startTUI(db *sql.DB, urls []string, selectors []selector) error {
 		c := newCollector(db, selectors)
 		total := float64(len(urls))
 		for i, url := range urls {
-			c.Visit(url)
+			if err := c.Visit(url); err != nil {
+				log.Printf("failed visiting %s\n", url)
+			}
 			p.Send(progressMsg(float64(i+1) / total))
 		}
 		p.Send(scrapeDoneMsg{})

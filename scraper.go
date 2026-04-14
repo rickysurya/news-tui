@@ -142,26 +142,6 @@ func registerHandler(c *colly.Collector, db *sql.DB, s selector) {
 	})
 }
 
-func scrape(db *sql.DB, urls []string, selectors []selector) {
-	c := colly.NewCollector(
-		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
-	)
-
-	for _, s := range selectors {
-		registerHandler(c, db, s)
-	}
-
-	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting", r.URL)
-	})
-
-	for _, url := range urls {
-		if err := c.Visit(url); err != nil {
-			log.Printf("Failed to visit %s: %v\n", url, err)
-		}
-	}
-}
-
 func newCollector(db *sql.DB, selectors []selector) *colly.Collector {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
