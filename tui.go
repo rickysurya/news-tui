@@ -7,26 +7,27 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-const pageSize = 10
 
 type scrapeDoneMsg struct{}
 type progressMsg float64
 
 type model struct {
-	articles  []Article
-	cursor    int
-	db        *sql.DB
-	page      int
-	loading   bool
-	progress  progress.Model
-	urls      []string
-	selectors []selector
-	width     int
-	height    int
+	filtered    []Article
+	cursor      int
+	db          *sql.DB
+	page        int
+	loading     bool
+	progress    progress.Model
+	urls        []string
+	selectors   []selector
+	width       int
+	height      int
+	searching   bool
+	searchInput textinput.Model
 }
 
 func (m model) Init() tea.Cmd {
@@ -35,11 +36,6 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.progress.Width = min(msg.Width-4, 60)
-
 	case progressMsg:
 		cmd := m.progress.SetPercent(float64(msg))
 		return m, cmd
@@ -54,42 +50,99 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			return m, nil
 		}
-		m.articles = articles
+		m.filtered = articles
 		m.loading = false
 		return m, nil
+
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.progress.Width = min(m.width-4, 60)
 
 	case tea.KeyMsg:
 		if m.loading {
 			return m, nil
 		}
+
+		if m.searching {
+			switch msg.String() {
+			case "esc", "ctrl+c":
+				m.searching = false
+				m.searchInput.SetValue("")
+				articles, err := getArticles(m.db, m.page)
+				if err != nil {
+					log.Println("failed to fetch articles :", err)
+				}
+				m.filtered = articles
+				m.cursor = 0
+				return m, nil
+			case "down":
+				if m.cursor < len(m.filtered)-1 {
+					m.cursor++
+				}
+				return m, nil
+			case "up":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+				return m, nil
+			default:
+				var cmd tea.Cmd
+				m.searchInput, cmd = m.searchInput.Update(msg)
+				query := strings.ToLower(m.searchInput.Value())
+				if query == "" {
+					articles, err := getArticles(m.db, 0)
+					if err != nil {
+						log.Println("failed to fetch articles :", err)
+					}
+					m.filtered = articles
+				} else {
+					articles, err := searchArticles(m.db, query)
+					if err != nil {
+						log.Println("failed to fetch articles :", err)
+					}
+					m.filtered = articles
+				}
+				m.cursor = 0
+				return m, cmd
+			}
+		}
+
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "/":
+			m.searching = true
+			m.searchInput.Focus()
+			return m, textinput.Blink
 		case "j", "down":
-			m.cursor = (m.cursor + 1) % len(m.articles)
+			m.cursor = (m.cursor + 1) % len(m.filtered)
 		case "k", "up":
-			m.cursor = (m.cursor - 1 + len(m.articles)) % len(m.articles)
+			m.cursor = (m.cursor - 1 + len(m.filtered)) % len(m.filtered)
 		case "n":
-			articles, err := getArticles(m.db, m.page+1)
-			if err != nil || len(articles) == 0 {
+			if !m.searching {
+				nextPage := m.page + 1
+				articles, err := getArticles(m.db, nextPage)
+				if err != nil || len(articles) == 0 {
+					return m, nil
+				}
+				m.filtered = articles
+				m.cursor = 0
+				m.page = nextPage
 				return m, nil
 			}
-			m.page++
-			m.articles = articles
-			m.cursor = 0
-			return m, nil
 		case "p":
-			if m.page == 0 {
+			if !m.searching && m.page > 0 {
+				prevPage := m.page - 1
+				articles, err := getArticles(m.db, prevPage)
+				if err != nil {
+					return m, nil
+				}
+				m.filtered = articles
+				m.cursor = 0
+				m.page = prevPage
 				return m, nil
 			}
-			articles, err := getArticles(m.db, m.page-1)
-			if err != nil {
-				return m, nil
-			}
-			m.page--
-			m.articles = articles
-			m.cursor = 0
-			return m, nil
 		}
 	}
 	return m, nil
@@ -113,11 +166,15 @@ var (
 			Foreground(lipgloss.Color("#004444")).
 			MarginTop(1).
 			PaddingLeft(1)
+
+	searchStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00FFD0")).
+			PaddingLeft(1)
 )
 
 func (m model) View() string {
 	if m.loading {
-		content := fmt.Sprintf("\n  fetching latest news...\n\n  %s\n", m.progress.View())
+		content := fmt.Sprintf("fetching latest news...\n\n%s", m.progress.View())
 		return lipgloss.NewStyle().
 			Width(m.width).
 			Height(m.height).
@@ -129,16 +186,23 @@ func (m model) View() string {
 
 	s.WriteString(headerStyle.Render("▲ MARKET NEWS") + "\n\n")
 
-	for i, a := range m.articles {
+	list := m.filtered
+	for i, a := range list {
 		title := hyperlink(a.Link, a.Title)
 		if i == m.cursor {
-			s.WriteString(selectedStyle.Render("⬡ "+title) + "\n\n")
+			s.WriteString(selectedStyle.Render("\u25c9 "+title) + "\n\n")
 		} else {
 			s.WriteString(normalStyle.Render("  "+title) + "\n\n")
 		}
 	}
 
-	s.WriteString(footerStyle.Render("j/k navigate · n/p page · q quit"))
+	if m.searching {
+		s.WriteString(searchStyle.Render("/ " + m.searchInput.View()))
+		s.WriteString(footerStyle.Render("\nesc quit ·\u2191/\u2193 navigate"))
+	} else {
+		s.WriteString(footerStyle.Render("j/k navigate · n/p page · / search · q quit"))
+	}
+
 	return s.String()
 }
 
@@ -152,12 +216,19 @@ func startTUI(db *sql.DB, urls []string, selectors []selector) error {
 		progress.WithoutPercentage(),
 	)
 
+	ti := textinput.New()
+	ti.Placeholder = "search..."
+	ti.CharLimit = 100
+	ti.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD0"))
+	ti.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD0"))
+
 	m := model{
-		db:        db,
-		loading:   true,
-		progress:  prog,
-		urls:      urls,
-		selectors: selectors,
+		db:          db,
+		loading:     true,
+		progress:    prog,
+		urls:        urls,
+		selectors:   selectors,
+		searchInput: ti,
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
@@ -167,7 +238,7 @@ func startTUI(db *sql.DB, urls []string, selectors []selector) error {
 		total := float64(len(urls))
 		for i, url := range urls {
 			if err := c.Visit(url); err != nil {
-				log.Printf("failed visiting %s\n", url)
+				log.Printf("error upon visiting %s: %s", url, err)
 			}
 			p.Send(progressMsg(float64(i+1) / total))
 		}

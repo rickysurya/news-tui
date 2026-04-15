@@ -127,6 +127,31 @@ func getArticles(db *sql.DB, page int) ([]Article, error) {
 	return articles, rows.Err()
 }
 
+func searchArticles(db *sql.DB, query string) ([]Article, error) {
+	rows, err := db.Query(
+		`SELECT id, title, link, scraped_at FROM articles WHERE title LIKE ? ORDER BY scraped_at DESC LIMIT 10`,
+		"%"+query+"%",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println("failed to close rows:", err)
+		}
+	}()
+
+	var articles []Article
+	for rows.Next() {
+		var a Article
+		if err := rows.Scan(&a.ID, &a.Title, &a.Link, &a.ScrapedAt); err != nil {
+			return nil, err
+		}
+		articles = append(articles, a)
+	}
+	return articles, rows.Err()
+}
+
 func registerHandler(c *colly.Collector, db *sql.DB, s selector) {
 	c.OnHTML(s.container, func(e *colly.HTMLElement) {
 		article := Article{
