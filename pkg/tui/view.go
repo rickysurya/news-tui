@@ -16,7 +16,7 @@ const (
 
 var (
 	boxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
+			Border(lipgloss.RoundedBorder(), true, true, true, true).
 			BorderForeground(lipgloss.Color("#1EDF6F")).
 			Padding(0, 1).
 			Width(boxWidth).
@@ -41,15 +41,15 @@ var (
 			PaddingLeft(1)
 
 	searchBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("#1EDF6F")).
-			Padding(0, 1).
-			Width(boxWidth).
-			MarginBottom(1)
+		// top, right, bottom, left
+		Border(lipgloss.RoundedBorder(), true, true, false, true).
+		BorderForeground(lipgloss.Color("#1EDF6F")).
+		Padding(0, 1).
+		Width(boxWidth)
 
 	searchLabelStyle = lipgloss.NewStyle().
 				Bold(true).
-				Foreground(lipgloss.Color("#1EDF6F"))
+				Foreground(lipgloss.Color("#39FF6F"))
 
 	noResultStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#5C5955")).
@@ -79,6 +79,7 @@ func (m model) View() string {
 	} else {
 		for i, a := range m.filtered {
 			title := hyperlink(a.Link, truncate(a.Title, titleWidth))
+
 			if i == m.cursor {
 				articles.WriteString(selectedStyle.Render(title) + "\n\n")
 			} else {
@@ -95,15 +96,23 @@ func (m model) View() string {
 
 	var s strings.Builder
 	s.WriteString(headerStyle.Render("▲ MARKET NEWS") + "\n\n")
-	s.WriteString(boxStyle.Render(articles.String()) + "\n")
 
+	searchArea := searchBoxStyle.Render(
+		searchLabelStyle.Render("\uf002  ") + m.searchInput.View(),
+	)
+
+	listArea := boxStyle.Render(articles.String() + "\n")
+	// s.WriteString(searchBoxStyle.Render(
+	// 	searchLabelStyle.Render("\uf002  ")+m.searchInput.View(),
+	// ) + "\n")
+	//
+	// s.WriteString(boxStyle.Render(articles.String()) + "\n")
+	leftPanel := lipgloss.JoinVertical(lipgloss.Left, searchArea, listArea)
+	s.WriteString(leftPanel)
 	if m.searching {
-		s.WriteString(searchBoxStyle.Render(
-			searchLabelStyle.Render("  ")+m.searchInput.View(),
-		) + "\n")
-		s.WriteString(footerStyle.Render("\u2191/\u2193 up/down · esc quit"))
+		s.WriteString(footerStyle.Render("enter: open · \u25b2/\u25bc: navigate · esc: back"))
 	} else {
-		s.WriteString(footerStyle.Render("j/\u2193 down · k/\u2191 up · n/\u2192 next · p/\u2190 previous · / search · q quit"))
+		s.WriteString(footerStyle.Render("j/\u25bc: down · k/\u25b2: up · n/\u25b6: next · p/\u25c0: previous · /: search · q: quit"))
 	}
 	return s.String()
 }

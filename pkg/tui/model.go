@@ -3,6 +3,7 @@ package tui
 import (
 	"database/sql"
 	"log"
+	"os/exec"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -34,6 +35,9 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
+func openBrowser(url string) {
+	_ = exec.Command("xdg-open", url).Start()
+}
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case progressMsg:
@@ -66,6 +70,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.searching {
 			switch msg.String() {
+			case "enter":
+				if len(m.filtered) > 0 {
+					openBrowser(m.filtered[m.cursor].Link)
+				}
 			case "esc":
 				m.searching = false
 				m.searchInput.SetValue("")
@@ -73,12 +81,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.filtered = articles
 				m.cursor = 0
 				return m, nil
-			case "j", "down":
+			case "down":
 				if m.cursor < len(m.filtered)-1 {
 					m.cursor++
 				}
 				return m, nil
-			case "k", "up":
+			case "up":
 				if m.cursor > 0 {
 					m.cursor--
 				}
@@ -98,6 +106,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch msg.String() {
+		case "enter":
+			if len(m.filtered) > 0 {
+				openBrowser(m.filtered[m.cursor].Link)
+			}
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "/":
@@ -141,7 +153,7 @@ func Start(db *sql.DB, urls []string, selectors []config.Selector) error {
 	)
 
 	ti := textinput.New()
-	ti.Placeholder = "search..."
+	ti.Prompt = ""
 	ti.CharLimit = 100
 	ti.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD0"))
 	ti.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD0"))
