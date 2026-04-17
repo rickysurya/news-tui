@@ -2,6 +2,7 @@ package tui
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -10,8 +11,6 @@ import (
 	"github.com/rickysurya/news-tui/pkg/config"
 	"github.com/rickysurya/news-tui/pkg/scraper"
 )
-
-const pageSize = 10
 
 type scrapeDoneMsg struct{}
 type progressMsg float64
@@ -109,7 +108,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = (m.cursor + 1) % len(m.filtered)
 		case "k", "up":
 			m.cursor = (m.cursor - 1 + len(m.filtered)) % len(m.filtered)
-		case "n":
+		case "n", "right":
 			articles, err := scraper.GetArticles(m.db, m.page+1)
 			if err != nil || len(articles) == 0 {
 				return m, nil
@@ -118,7 +117,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filtered = articles
 			m.cursor = 0
 			return m, nil
-		case "p":
+		case "p", "left":
 			if m.page == 0 {
 				return m, nil
 			}
@@ -162,7 +161,10 @@ func Start(db *sql.DB, urls []string, selectors []config.Selector) error {
 		c := scraper.NewCollector(db, selectors)
 		total := float64(len(urls))
 		for i, url := range urls {
-			c.Visit(url)
+			err := c.Visit(url)
+			if err != nil {
+				log.Println("failed to fetch url:", url)
+			}
 			p.Send(progressMsg(float64(i+1) / total))
 		}
 		p.Send(scrapeDoneMsg{})
