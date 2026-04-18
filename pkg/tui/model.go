@@ -38,6 +38,7 @@ func (m model) Init() tea.Cmd {
 func openBrowser(url string) {
 	_ = exec.Command("xdg-open", url).Start()
 }
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case progressMsg:
@@ -74,6 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(m.filtered) > 0 {
 					openBrowser(m.filtered[m.cursor].Link)
 				}
+				return m, nil
 			case "esc":
 				m.searching = false
 				m.searchInput.SetValue("")
@@ -110,6 +112,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.filtered) > 0 {
 				openBrowser(m.filtered[m.cursor].Link)
 			}
+			return m, nil
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "/":
