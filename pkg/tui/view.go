@@ -9,18 +9,22 @@ import (
 )
 
 const (
-	boxWidth   = 80
+	boxWidth   = 70
 	boxHeight  = 22
-	titleWidth = 74
+	titleWidth = 66
+	listLines  = 20
 )
 
 var (
 	boxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder(), true, true, true, true).
-			BorderForeground(lipgloss.Color("#1EDF6F")).
-			Padding(0, 1).
-			Width(boxWidth).
-			Height(boxHeight)
+		// top, right, bottom, left
+		Border(lipgloss.NormalBorder(), true, true, true, true).
+		BorderForeground(lipgloss.Color("#1EDF6F")).
+		Width(boxWidth)
+		// Height(boxHeight)
+
+	dividerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#1EDF6F"))
 
 	headerStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -40,13 +44,6 @@ var (
 			MarginTop(1).
 			PaddingLeft(1)
 
-	searchBoxStyle = lipgloss.NewStyle().
-		// top, right, bottom, left
-		Border(lipgloss.RoundedBorder(), true, true, false, true).
-		BorderForeground(lipgloss.Color("#1EDF6F")).
-		Padding(0, 1).
-		Width(boxWidth)
-
 	searchLabelStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(lipgloss.Color("#39FF6F"))
@@ -63,6 +60,7 @@ func truncate(s string, max int) string {
 	}
 	return string([]rune(s)[:max-3]) + "..."
 }
+
 func (m model) View() string {
 	if m.loading {
 		content := fmt.Sprintf("fetching latest news...\n\n%s", m.progress.View())
@@ -75,11 +73,11 @@ func (m model) View() string {
 
 	var articles strings.Builder
 	if len(m.filtered) == 0 {
-		articles.WriteString(noResultStyle.Render("no results") + "\n")
+		articles.WriteString(noResultStyle.Render("no results"))
+		articles.WriteString(strings.Repeat("\n", listLines))
 	} else {
 		for i, a := range m.filtered {
 			title := hyperlink(a.Link, truncate(a.Title, titleWidth))
-
 			if i == m.cursor {
 				articles.WriteString(selectedStyle.Render(title) + "\n\n")
 			} else {
@@ -97,22 +95,16 @@ func (m model) View() string {
 	var s strings.Builder
 	s.WriteString(headerStyle.Render("▲ MARKET NEWS") + "\n\n")
 
-	searchArea := searchBoxStyle.Render(
-		searchLabelStyle.Render("\uf002  ") + m.searchInput.View(),
-	)
+	divider := dividerStyle.Render(strings.Repeat("\u2500", boxWidth))
+	searchArea := searchLabelStyle.Render("\uf002  ") + m.searchInput.View()
 
-	listArea := boxStyle.Render(articles.String() + "\n")
-	// s.WriteString(searchBoxStyle.Render(
-	// 	searchLabelStyle.Render("\uf002  ")+m.searchInput.View(),
-	// ) + "\n")
-	//
-	// s.WriteString(boxStyle.Render(articles.String()) + "\n")
-	leftPanel := lipgloss.JoinVertical(lipgloss.Left, searchArea, listArea)
-	s.WriteString(leftPanel)
+	leftPane := lipgloss.JoinVertical(lipgloss.Left, searchArea, divider, articles.String())
+	s.WriteString(boxStyle.Render(leftPane) + "\n")
+
 	if m.searching {
-		s.WriteString(footerStyle.Render("enter: open · \u25b2/\u25bc: navigate · esc: back"))
+		s.WriteString(footerStyle.Render("enter open browser · \u25b2/\u25bc navigate · esc cancel"))
 	} else {
-		s.WriteString(footerStyle.Render("j/\u25bc: down · k/\u25b2: up · n/\u25b6: next · p/\u25c0: previous · /: search · q: quit"))
+		s.WriteString(footerStyle.Render("j/\u25bc down · k/\u25b2 up · n/\u25b6 next · p/\u25c0 previous · / search · q quit"))
 	}
 	return s.String()
 }
