@@ -10,7 +10,6 @@ import (
 
 const (
 	boxWidth   = 70
-	boxHeight  = 22
 	titleWidth = 66
 	listLines  = 20
 )
@@ -20,37 +19,35 @@ var (
 		// top, right, bottom, left
 		Border(lipgloss.NormalBorder(), true, true, true, true).
 		BorderForeground(lipgloss.Color("#1EDF6F")).
-		Width(boxWidth)
-		// Height(boxHeight)
+		Width(boxWidth).
+		PaddingLeft(1).
+		PaddingRight(1)
 
 	dividerStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#1EDF6F"))
 
-	headerStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#39FF6F")).
-			PaddingLeft(1)
-
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#39FF6F")).
-			PaddingLeft(1)
+			PaddingTop(1).
+			PaddingBottom(1)
 
 	normalStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#0F7A3C")).
-			PaddingLeft(1)
+			PaddingTop(1).
+			PaddingBottom(1)
 
 	footerStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#5C5955")).
 			MarginTop(1).
-			PaddingLeft(1)
+			Align(lipgloss.Center)
 
 	searchLabelStyle = lipgloss.NewStyle().
 				Bold(true).
-				Foreground(lipgloss.Color("#39FF6F"))
+				Foreground(lipgloss.Color("#39FF6F")).
+				PaddingLeft(1)
 
 	noResultStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#5C5955")).
-			PaddingLeft(1).
 			Italic(true)
 )
 
@@ -62,6 +59,7 @@ func truncate(s string, max int) string {
 }
 
 func (m model) View() string {
+	h := m.height - 4
 	if m.loading {
 		content := fmt.Sprintf("fetching latest news...\n\n%s", m.progress.View())
 		return lipgloss.NewStyle().
@@ -79,34 +77,36 @@ func (m model) View() string {
 		for i, a := range m.filtered {
 			title := hyperlink(a.Link, truncate(a.Title, titleWidth))
 			if i == m.cursor {
-				articles.WriteString(selectedStyle.Render(title) + "\n\n")
+				articles.WriteString(selectedStyle.Render(title))
 			} else {
-				articles.WriteString(normalStyle.Render(title) + "\n\n")
+				articles.WriteString(normalStyle.Render(title))
 			}
 			if i == len(m.filtered)-1 {
-				remaining := 10 - len(m.filtered)
+				remaining := 20 - len(m.filtered)
 				for range make([]struct{}, remaining) {
-					articles.WriteString("\n\n")
+					articles.WriteString("\n")
 				}
 			}
 		}
 	}
 
 	var s strings.Builder
-	s.WriteString(headerStyle.Render("▲ MARKET NEWS") + "\n\n")
 
-	divider := dividerStyle.Render(strings.Repeat("\u2500", boxWidth))
-	searchArea := searchLabelStyle.Render("\uf002  ") + m.searchInput.View()
+	divider := dividerStyle.Render(strings.Repeat("\u2500", boxWidth-2))
+	searchArea := searchLabelStyle.Render("\uf002  " + m.searchInput.View())
 
-	leftPane := lipgloss.JoinVertical(lipgloss.Left, searchArea, divider, articles.String())
-	s.WriteString(boxStyle.Render(leftPane) + "\n")
+	listPane := lipgloss.JoinVertical(lipgloss.Left, searchArea, divider, articles.String())
+	s.WriteString(boxStyle.Height(h).Render(listPane) + "\n")
 
 	if m.searching {
 		s.WriteString(footerStyle.Render("enter open browser · \u25b2/\u25bc navigate · esc cancel"))
 	} else {
 		s.WriteString(footerStyle.Render("j/\u25bc down · k/\u25b2 up · n/\u25b6 next · p/\u25c0 previous · / search · q quit"))
 	}
-	return s.String()
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Align(lipgloss.Center).
+		Render(s.String())
 }
 
 func hyperlink(url, text string) string {

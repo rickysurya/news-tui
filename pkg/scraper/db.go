@@ -8,6 +8,10 @@ import (
 	"github.com/rickysurya/news-tui/pkg/config"
 )
 
+const (
+	limit = 20
+)
+
 func InitDB(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -33,7 +37,6 @@ func SaveArticle(db *sql.DB, a config.Article) error {
 }
 
 func GetArticles(db *sql.DB, page int) ([]config.Article, error) {
-	const limit = 10
 	rows, err := db.Query(
 		`SELECT id, title, link, scraped_at FROM articles ORDER BY scraped_at DESC LIMIT ? OFFSET ?`,
 		limit, page*limit,
@@ -60,8 +63,8 @@ func GetArticles(db *sql.DB, page int) ([]config.Article, error) {
 
 func SearchArticles(db *sql.DB, query string) ([]config.Article, error) {
 	rows, err := db.Query(
-		`SELECT id, title, link, scraped_at FROM articles WHERE title LIKE ? ORDER BY scraped_at DESC LIMIT 10`,
-		"%"+query+"%",
+		`SELECT id, title, link, scraped_at FROM articles WHERE title LIKE ? ORDER BY scraped_at DESC LIMIT ?`,
+		"%"+query+"%", limit,
 	)
 	if err != nil {
 		return nil, err
