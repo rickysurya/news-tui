@@ -81,12 +81,6 @@ func (m model) View() string {
 			} else {
 				articles.WriteString(normalStyle.Render(title))
 			}
-			if i == len(m.filtered)-1 {
-				remaining := 20 - len(m.filtered)
-				for range make([]struct{}, remaining) {
-					articles.WriteString("\n")
-				}
-			}
 		}
 	}
 

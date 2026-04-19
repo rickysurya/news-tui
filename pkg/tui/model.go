@@ -158,6 +158,7 @@ func Start(db *sql.DB, urls []string, selectors []config.Selector) error {
 	ti := textinput.New()
 	ti.Prompt = ""
 	ti.CharLimit = 100
+	ti.Cursor.Blink = true
 	ti.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD0"))
 	ti.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD0"))
 
