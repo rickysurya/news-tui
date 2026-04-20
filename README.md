@@ -2,9 +2,8 @@
 
 A terminal-based news aggregator, built with Go and Bubble Tea.
 
-<div align="center"?
-  <img src="demo.gif" width="500" alt="demo" />
-</div>
+<img src="demo.gif" width="500" alt="demo" align="center"/>
+
 ## Features
 
 - Aggregates news from multiple media sources
