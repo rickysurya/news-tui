@@ -2,7 +2,7 @@
 
 A terminal-based news aggregator, built with Go and Bubble Tea.
 
-![demo](demo.gif)
+!<img src="demo.gif" width="600" alt="demo" />
 
 ## Features
 
