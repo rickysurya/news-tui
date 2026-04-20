@@ -15,3 +15,6 @@ bin/
 .env
 
 *.db
+
+demo.tape
+news-tui
