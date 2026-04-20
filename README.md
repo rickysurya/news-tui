@@ -1,6 +1,6 @@
-# news-tui
+<h1 align="center">news-tui</h1>
 
-A terminal-based news aggregator, built with Go and Bubble Tea.
+<p align="center">A terminal-based news aggregator, built with Go and Bubble Tea</p>
 
 <p align="center">
   <img src="demo.gif" width="600" alt="demo"/>
