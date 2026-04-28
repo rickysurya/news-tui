@@ -48,7 +48,7 @@ SELECTOR_2_CONTAINER=
 ...
 ```
 
-Each `URL_N` is a page to scrape. Each `SELECTOR_N_*` group defines the CSS selectors for extracting article titles and links from that page. The number of selector groups should match or exceed the number of URLs.
+Each `URL_N` is a page to scrape. Each `SELECTOR_N_*` group defines the CSS selectors for extracting article titles and links from that page. The number of selector groups should match the number of URLs.
 
 ## Usage
 
