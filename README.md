@@ -6,6 +6,9 @@
   <img src="demo.gif" width="600" alt="demo"/>
 </p>
 
+## Why Scraping Over RSS Feeds?
+I tried RSS first. The feeds worked, but I always missed some of the news I actually wanted to read. So I built this app that pulls titles and links straight from the front page instead, while still respecting each source's robots.txt. The app only fetches when user runs it.
+
 ## Features
 - Aggregates news from multiple media sources
 - Live search across all scraped articles
@@ -76,10 +79,6 @@ The app scrapes configured sources on startup, saves new articles to a local SQL
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) — TUI framework
 - [Colly](https://github.com/gocolly/colly) — scraping
 - [go-sqlite3](https://github.com/mattn/go-sqlite3) — local storage
-
-
-## Why Scraping Over RSS Feeds?
-I tried RSS first. The feeds worked, but I always missed some of the news I actually wanted to read. So I built this app that pulls titles and links straight from the front page instead, while still respecting each source's robots.txt. The app only fetches when user runs it.
 
 
 ## License
