@@ -6,16 +6,6 @@
   <img src="demo.gif" width="600" alt="demo"/>
 </p>
 
-## Why Scraping Over RSS Feeds?
-I tried RSS first. The feeds worked, but I always missed some of the news I actually wanted to read. So I built this app that pulls titles and links straight from the front page instead, while still respecting each source's robots.txt. The app only fetches when user runs it.
-
-## Features
-- Aggregates news from multiple media sources
-- Live search across all scraped articles
-- Pagination with keyboard navigation
-- Persistent local storage and articles are deduplicated across runs
-- Only open articles you want to read with minimal distraction
-
 ## Requirements
 
 - Go 1.21+
@@ -58,8 +48,7 @@ Each `URL_N` is a page to scrape. Each `SELECTOR_N_*` group defines the CSS sele
 ```bash
 ./news-tui
 ```
-
-The app scrapes configured sources on startup, saves new articles to a local SQLite database, then launches the TUI.
+or you can set an alias to the binary for easier access
 
 ## Keybindings
 
